@@ -26,6 +26,12 @@ def parse_args() -> argparse.Namespace:
     start.add_argument("--adapter", default="auto", help="Worker adapter override.")
     start.add_argument("--run-id", default="", help="Optional explicit run id.")
     start.add_argument(
+        "--engine",
+        choices=["shell", "codex", "gemini"],
+        default="shell",
+        help="AI engine for lane execution. codex/gemini use ai-worker adapter.",
+    )
+    start.add_argument(
         "--skip-runbook-lint",
         action="store_true",
         help="Skip strict runbook lint before start.",
@@ -79,11 +85,17 @@ def main() -> int:
                         f"[WARN] runbook lint: {row.get('code', 'lint-warning')} "
                         f"path={row.get('path', '')} message={row.get('message', '')}"
                     )
+            # Determine effective adapter based on engine
+            effective_adapter = args.adapter
+            if args.engine in ("codex", "gemini") and effective_adapter == "auto":
+                effective_adapter = "ai-worker"
+
             state = orchestrator.start(
                 runbook_path=runbook,
                 manifest_path=manifest,
-                adapter_name=args.adapter,
+                adapter_name=effective_adapter,
                 run_id=args.run_id or None,
+                engine=args.engine,
             )
             print("[OK] run started")
             print_state_summary(state)

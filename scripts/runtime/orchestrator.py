@@ -697,6 +697,7 @@ class RuntimeOrchestrator:
         manifest_path: Path | None,
         adapter_name: str,
         run_id: str | None = None,
+        engine: str = "shell",
     ) -> Dict[str, Any]:
         runbook = self._load_json(runbook_path)
         manifest = self._load_json(manifest_path) if manifest_path else {}
@@ -746,7 +747,7 @@ class RuntimeOrchestrator:
                     "error": "",
                     "worker_id": str(assigned_worker.get("id", "")),
                     "worker_role": str(assigned_worker.get("role", "")),
-                    "worker_engine": str(assigned_worker.get("engine", "")),
+                    "worker_engine": str(assigned_worker.get("engine", "")) or engine,
                     "worker_command_template": str(assigned_worker.get("command_template", "")),
                     "ai_timeout_sec": self._safe_int(assigned_worker.get("timeout_sec", 180), 180),
                     "ai_max_retries": self._safe_int(assigned_worker.get("max_retries", 1), 1),
