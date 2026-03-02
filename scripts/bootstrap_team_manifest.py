@@ -219,7 +219,7 @@ def main() -> int:
                 if engine == "gemini":
                     w["command_template"] = 'gemini -p "{cmd}" --yolo'
                 else:
-                    w["command_template"] = 'codex exec --skip-git-repo-check "{cmd}"'
+                    w["command_template"] = 'codex exec --enable multi_agent --skip-git-repo-check "{cmd}"'
     else:
         if args.worker_cmd_template.strip():
             base_template = args.worker_cmd_template.strip()

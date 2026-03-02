@@ -56,7 +56,7 @@ def _wrap_command(engine: str, cmd: str, template: str) -> str:
             base = base + " {cmd}"
         return base.format(cmd=cmd)
     if engine == "codex":
-        return f'codex exec --skip-git-repo-check "{cmd}"'
+        return f'codex exec --enable multi_agent --skip-git-repo-check "{cmd}"'
     if engine == "gemini":
         return f'gemini -p "{cmd}" --yolo'
     return cmd

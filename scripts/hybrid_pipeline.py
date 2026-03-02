@@ -259,7 +259,7 @@ def build_manifest(runbook: Dict[str, Any], adapter: str, ai_engine: str) -> Dic
             else:
                 engine = ai_engine
         if adapter == "ai-worker":
-            command_template = 'codex exec --skip-git-repo-check "{cmd}"' if engine != "gemini" else 'gemini -p "{cmd}" --yolo'
+            command_template = 'codex exec --enable multi_agent --skip-git-repo-check "{cmd}"' if engine != "gemini" else 'gemini -p "{cmd}" --yolo'
         elif adapter == "process-worker":
             command_template = "{cmd}"
         else:

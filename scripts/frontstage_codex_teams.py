@@ -833,7 +833,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout-sec", type=int, default=180, help="Per-agent timeout seconds")
     parser.add_argument(
         "--agent-cmd-template",
-        default='codex exec --skip-git-repo-check "{prompt}"',
+        default='codex exec --enable multi_agent --skip-git-repo-check "{prompt}"',
         help="Agent command template. Placeholders: {prompt}, {role}, {phase}, {objective}, {round_index}",
     )
     parser.add_argument("--skip-codex-check", action="store_true", help="Skip codex availability/login probe")
