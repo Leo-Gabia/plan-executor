@@ -27,9 +27,9 @@ def parse_args() -> argparse.Namespace:
     start.add_argument("--run-id", default="", help="Optional explicit run id.")
     start.add_argument(
         "--engine",
-        choices=["shell", "codex", "gemini"],
+        choices=["shell", "codex"],
         default="shell",
-        help="AI engine for lane execution. codex/gemini use ai-worker adapter.",
+        help="AI engine for lane execution. codex uses ai-worker adapter.",
     )
     start.add_argument(
         "--skip-runbook-lint",
@@ -87,7 +87,7 @@ def main() -> int:
                     )
             # Determine effective adapter based on engine
             effective_adapter = args.adapter
-            if args.engine in ("codex", "gemini") and effective_adapter == "auto":
+            if args.engine == "codex" and effective_adapter == "auto":
                 effective_adapter = "ai-worker"
 
             state = orchestrator.start(

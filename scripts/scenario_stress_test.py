@@ -511,20 +511,19 @@ def build_cases() -> List[TestCase]:
             recommendation="Keep process-worker + manifest command templates wired into orchestrator runtime context.",
         ),
         TestCase(
-            scenario="AI worker restricted to codex/gemini with unavailable-skip policy",
+            scenario="AI worker restricted to codex with unavailable-skip policy",
             severity="high",
             patterns=[
                 r"ai-worker",
                 r"codex",
-                r"gemini",
-                r"unavailable-skip|not logged in|GEMINI_API_KEY",
+                r"unavailable-skip|not logged in",
             ],
             required_files=[
                 "scripts/runtime/worker_adapters.py",
                 "scripts/bootstrap_team_manifest.py",
             ],
             why_it_matters="Operational stability requires explicit behavior when AI CLI auth is missing.",
-            recommendation="Allow only codex/gemini engines and skip unavailable workers without failing whole run.",
+            recommendation="Allow only codex engine and skip unavailable workers without failing whole run.",
         ),
         TestCase(
             scenario="AI worker E2E regression harness present",
@@ -532,14 +531,13 @@ def build_cases() -> List[TestCase]:
             patterns=[
                 r"ai-worker",
                 r"codex",
-                r"gemini",
                 r"skip",
             ],
             required_files=[
                 "scripts/ai_worker_regression_test.py",
             ],
             why_it_matters="Changes in CLI auth/runtime behavior can silently regress without scenario coverage.",
-            recommendation="Keep codex-only/gemini-explicit/gemini-missing-key end-to-end scenarios automated.",
+            recommendation="Keep codex execution and repair-split end-to-end scenarios automated.",
         ),
         TestCase(
             scenario="Hybrid bridge for frontstage planner to PE runtime",

@@ -54,9 +54,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--ai-engine",
-        choices=["mixed", "codex", "gemini"],
+        choices=["codex"],
         default="codex",
-        help="Engine assignment strategy for ai-worker.",
+        help="Engine assignment for ai-worker.",
     )
     parser.add_argument(
         "--ai-timeout-sec",
@@ -197,16 +197,8 @@ def main() -> int:
     adapter, notes = resolve_adapter(args.adapter, workers)
     worker_specs = build_workers(args.mode, workers)
     if adapter == "ai-worker":
-        engines: List[str] = []
-        if args.ai_engine == "mixed":
-            base = ["codex", "gemini"]
-            for i in range(len(worker_specs)):
-                engines.append(base[i % len(base)])
-        else:
-            engines = [args.ai_engine for _ in worker_specs]
-
-        for w, engine in zip(worker_specs, engines):
-            w["engine"] = engine
+        for w in worker_specs:
+            w["engine"] = args.ai_engine
             w["timeout_sec"] = max(10, args.ai_timeout_sec)
             w["max_retries"] = max(0, args.ai_max_retries)
             w["backoff_sec"] = max(0.0, args.ai_backoff_sec)
@@ -216,10 +208,7 @@ def main() -> int:
                     base_template.replace("{worker_id}", str(w["id"])).replace("{worker_role}", str(w["role"]))
                 )
             else:
-                if engine == "gemini":
-                    w["command_template"] = 'gemini -p "{cmd}" --yolo'
-                else:
-                    w["command_template"] = 'codex exec --enable multi_agent --skip-git-repo-check "{cmd}"'
+                w["command_template"] = 'codex exec --enable multi_agent --skip-git-repo-check "{cmd}"'
     else:
         if args.worker_cmd_template.strip():
             base_template = args.worker_cmd_template.strip()

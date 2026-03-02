@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""E2E regression tests for ai-worker (codex/gemini) runtime behavior."""
+"""E2E regression tests for ai-worker (codex) runtime behavior."""
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -105,7 +104,7 @@ def build_manifest(path: Path, engines: List[str]) -> None:
             "requested_adapter": "ai-worker",
             "task_type": "code",
             "worker_count": len(workers),
-            "ai_engine": "mixed" if len(set(engines)) > 1 else engines[0],
+            "ai_engine": engines[0] if engines else "codex",
         },
         "workers": workers,
     }
@@ -139,7 +138,6 @@ def run_case(
     project_root: Path,
     case_id: str,
     engines: List[str],
-    force_empty_gemini_key: bool,
 ) -> Tuple[bool, Dict[str, Any]]:
     pe_root = project_root / ".plan-executor"
     runbook = pe_root / "runbooks" / f"{case_id}-runbook.json"
@@ -149,39 +147,14 @@ def run_case(
     build_runbook(runbook)
     build_manifest(manifest, engines=engines)
 
-    old_key = os.environ.get("GEMINI_API_KEY")
-    try:
-        if force_empty_gemini_key:
-            os.environ["GEMINI_API_KEY"] = ""
-        orch = RuntimeOrchestrator(project_root)
-        state = orch.start(runbook_path=runbook, manifest_path=manifest, adapter_name="auto", run_id=run_id)
-    finally:
-        if force_empty_gemini_key:
-            if old_key is None:
-                os.environ.pop("GEMINI_API_KEY", None)
-            else:
-                os.environ["GEMINI_API_KEY"] = old_key
+    orch = RuntimeOrchestrator(project_root)
+    state = orch.start(runbook_path=runbook, manifest_path=manifest, adapter_name="auto", run_id=run_id)
 
     store = EventStore(project_root)
     metrics = collect_ai_lane_metrics(store, run_id)
     status = str(state.get("status", "unknown"))
 
     ok = status == "completed"
-    # Gemini-missing-key: gemini unavailable, no fallback_chain configured so lanes are skipped.
-    # Both lanes should complete with skip evidence (ai-worker-unavailable-skip).
-    if case_id == "gemini-missing-key":
-        ok = ok and metrics["lane_done_count"] == 2
-        # All lanes should be skipped since gemini key is empty and no fallback chain.
-        ok = ok and metrics["skip_count"] == 2
-    # Gemini-explicit: gemini requested explicitly; if available it runs, if not it skips.
-    if case_id == "gemini-explicit":
-        ok = ok and metrics["lane_done_count"] == 2
-        if os.environ.get("GEMINI_API_KEY", "").strip():
-            # Key present: verify gemini engine actually ran.
-            ok = ok and metrics["by_engine"].get("gemini", 0) == 2
-        else:
-            # Key absent: verify lanes were properly skipped (not silently misrouted).
-            ok = ok and metrics["skip_count"] == 2
     # Codex-only must route to codex engine.
     if case_id == "codex-only":
         ok = ok and metrics["by_engine"].get("codex", 0) == 2
@@ -220,8 +193,6 @@ def run_repair_engine_split_case(project_root: Path) -> Tuple[bool, Dict[str, An
     def fake_check_available(engine: str, _project_root: Path) -> Tuple[bool, str, Dict[str, Any]]:
         if engine == "codex":
             return True, "ok", {"check_cmd": "fake-codex-check", "returncode": 0, "stdout": "ok", "stderr": ""}
-        if engine == "gemini":
-            return False, "gemini-cli-not-found", {"check_cmd": "fake-gemini-check", "returncode": 127, "stdout": "", "stderr": "not found"}
         return False, "unsupported-engine", {"check_cmd": "fake-engine-check", "returncode": 2, "stdout": "", "stderr": engine}
 
     def fake_run(cmd: str, **kwargs: Any) -> subprocess.CompletedProcess[str]:
@@ -280,17 +251,15 @@ def main() -> int:
     args = parse_args()
     project_root = Path(args.project_root).resolve()
     cases = [
-        ("codex-only", ["codex", "codex"], False),
-        ("gemini-explicit", ["gemini", "gemini"], False),
-        ("gemini-missing-key", ["gemini", "gemini"], True),
+        ("codex-only", ["codex", "codex"]),
     ]
 
     passed = 0
     rows = []
     print("AI Worker Regression Test")
     print("=" * 40)
-    for case_id, engines, force_empty in cases:
-        ok, detail = run_case(project_root, case_id, engines, force_empty)
+    for case_id, engines in cases:
+        ok, detail = run_case(project_root, case_id, engines)
         rows.append(detail)
         status = "PASS" if ok else "FAIL"
         print(

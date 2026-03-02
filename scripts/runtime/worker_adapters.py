@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import subprocess
 import time
@@ -71,17 +70,20 @@ def _resolve_fallback_chain(lane: Dict[str, Any], primary_engine: str) -> List[s
 
     Reads from lane._runtime.fallback_chain or lane.fallback_chain.
     Default (no config): primary engine only — preserves skip behavior.
-    With explicit config (e.g. "codex,gemini,shell"): tries engines in order.
+    With explicit config (e.g. "codex,shell"): tries engines in order.
     Returns list of engines to try IN ORDER (primary first, then fallbacks).
     """
     runtime = lane.get("_runtime", {})
     chain_raw = runtime.get("fallback_chain", lane.get("fallback_chain", ""))
+    supported = {"codex", "shell"}
     if isinstance(chain_raw, list) and chain_raw:
-        chain = [str(x).strip().lower() for x in chain_raw if str(x).strip()]
+        chain = [str(x).strip().lower() for x in chain_raw if str(x).strip().lower() in supported]
     elif isinstance(chain_raw, str) and chain_raw.strip():
-        chain = [x.strip().lower() for x in chain_raw.split(",") if x.strip()]
+        chain = [x.strip().lower() for x in chain_raw.split(",") if x.strip().lower() in supported]
     else:
         # No fallback_chain configured: default to primary engine only (preserves skip behavior)
+        chain = [primary_engine]
+    if not chain:
         chain = [primary_engine]
 
     # Ensure primary is first if not already
@@ -740,13 +742,11 @@ class AiCliWorkerAdapter(BaseAdapter):
     def _detect_engine(self, lane: Dict[str, Any]) -> str:
         runtime = lane.get("_runtime", {})
         engine = str(runtime.get("worker_engine", "")).strip().lower() or str(lane.get("worker_engine", "")).strip().lower()
-        if engine in {"codex", "gemini"}:
+        if engine == "codex":
             return engine
         return "codex"
 
     def _default_template(self, engine: str) -> str:
-        if engine == "gemini":
-            return 'gemini -p "{cmd}" --yolo'
         return 'codex exec --enable multi_agent --skip-git-repo-check "{cmd}"'
 
     def _normalize_ai_result(
@@ -794,19 +794,6 @@ class AiCliWorkerAdapter(BaseAdapter):
             if proc.returncode == 0:
                 return True, "ok", detail
             return False, "codex-not-logged-in", detail
-
-        if engine == "gemini":
-            if not shutil.which("gemini"):
-                return False, "gemini-cli-not-found", {"check_cmd": "where gemini", "returncode": 127, "stdout": "", "stderr": "not found"}
-            api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-            if not api_key:
-                return False, "gemini-not-logged-in-or-api-key-missing", {
-                    "check_cmd": "env:GEMINI_API_KEY",
-                    "returncode": 1,
-                    "stdout": "",
-                    "stderr": "GEMINI_API_KEY is empty",
-                }
-            return True, "ok", {"check_cmd": "env:GEMINI_API_KEY", "returncode": 0, "stdout": "set", "stderr": ""}
 
         return False, "unsupported-engine", {"check_cmd": "engine-validate", "returncode": 2, "stdout": "", "stderr": engine}
 

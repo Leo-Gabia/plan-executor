@@ -254,12 +254,9 @@ def build_manifest(runbook: Dict[str, Any], adapter: str, ai_engine: str) -> Dic
     for i, role in enumerate(roles, start=1):
         engine = ""
         if adapter == "ai-worker":
-            if ai_engine == "mixed":
-                engine = "codex" if (i % 2 == 1) else "gemini"
-            else:
-                engine = ai_engine
+            engine = ai_engine
         if adapter == "ai-worker":
-            command_template = 'codex exec --enable multi_agent --skip-git-repo-check "{cmd}"' if engine != "gemini" else 'gemini -p "{cmd}" --yolo'
+            command_template = 'codex exec --enable multi_agent --skip-git-repo-check "{cmd}"'
         elif adapter == "process-worker":
             command_template = "{cmd}"
         else:
@@ -304,7 +301,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--runbook-out", default="", help="Output runbook JSON path")
     parser.add_argument("--manifest-out", default="", help="Output manifest JSON path")
     parser.add_argument("--adapter", default="auto", choices=["auto", "inline-worker", "process-worker", "ai-worker", "worktree-worker", "tmux-worker"])
-    parser.add_argument("--ai-engine", default="codex", choices=["codex", "gemini", "mixed"])
+    parser.add_argument("--ai-engine", default="codex", choices=["codex"])
     parser.add_argument("--run-id", default="", help="Optional explicit run id")
     parser.add_argument("--prepare-only", action="store_true", help="Prepare artifacts only without starting run")
     parser.add_argument(

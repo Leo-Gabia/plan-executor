@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 import time
@@ -39,12 +38,6 @@ def _engine_available(engine: str, project_root: Path) -> tuple[bool, str]:
         if probe.returncode != 0:
             return False, "codex-not-logged-in"
         return True, ""
-    if engine == "gemini":
-        if not shutil.which("gemini"):
-            return False, "gemini-cli-not-found"
-        if not os.environ.get("GEMINI_API_KEY", "").strip():
-            return False, "gemini-api-key-missing"
-        return True, ""
     return False, f"unsupported-engine:{engine}"
 
 
@@ -57,8 +50,6 @@ def _wrap_command(engine: str, cmd: str, template: str) -> str:
         return base.format(cmd=cmd)
     if engine == "codex":
         return f'codex exec --enable multi_agent --skip-git-repo-check "{cmd}"'
-    if engine == "gemini":
-        return f'gemini -p "{cmd}" --yolo'
     return cmd
 
 

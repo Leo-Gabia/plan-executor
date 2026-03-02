@@ -15,7 +15,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--project-root", default=".", help="Project root containing .plan-executor")
     parser.add_argument("--worker-id", default="delegate-1", help="Worker id")
     parser.add_argument("--role-filter", default="", help="Optional owner_role filter")
-    parser.add_argument("--engine", default="shell", choices=["shell", "process", "codex", "gemini"], help="Execution engine")
+    parser.add_argument("--engine", default="shell", choices=["shell", "process", "codex"], help="Execution engine")
     parser.add_argument("--command-template", default="", help="Optional command template containing {cmd}")
     parser.add_argument("--timeout-sec", type=int, default=180)
 
