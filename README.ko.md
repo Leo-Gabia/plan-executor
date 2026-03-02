@@ -194,7 +194,7 @@ limits.fallback_chain: "codex,gemini,shell"
 | 유형 | 트리거 | 처리 방식 |
 |------|--------|-----------|
 | **인프라** | 타임아웃, SIGKILL, SIGSEGV, 바이너리 없음, stderr 비어있음 | 결정론적: PE가 백오프로 재시도 후 `fallback_chain`의 나머지 엔진을 순서대로 시도. 엔진 전환 시 템플릿도 동기화되어 후속 커맨드가 올바른 래퍼로 실행됨. |
-| **로직** | 의미있는 stderr와 함께 비정상 종료 (테스트 실패, 빌드 에러) | AI 판단: stderr/stdout에서 수리 프롬프트 생성, AI 엔진에 진단 및 수정 요청. `max_replan`으로 제한. 인프라 fallback이 이미 실패를 해결한 경우 건너뜀. |
+| **로직** | 의미있는 stderr와 함께 비정상 종료 (테스트 실패, 빌드 에러) | AI 판단: stderr/stdout에서 수리 프롬프트를 생성한 뒤, 현재 실행 fallback 상태와 무관하게 전용 Codex 수리 엔진(`codex`)으로 수리를 시도. `max_replan`으로 제한되며 Codex 수리가 불가능하면 수리 루프를 건너뜀. |
 
 분류 로직 (`_classify_failure`):
 - 타임아웃 → 인프라
@@ -204,7 +204,7 @@ limits.fallback_chain: "codex,gemini,shell"
 
 **실행 중 인프라 fallback:** 레인 실행 도중 인프라 실패가 발생하면 PE가 `fallback_chain`의 나머지 엔진을 순서대로 시도합니다. 성공 시 `effective_engine`과 `template`이 모두 갱신되어, 같은 레인의 후속 커맨드가 새 엔진을 통해 실행됩니다. 이를 통해 fallback이 한 커맨드에서 성공했지만 이후 커맨드가 실패한 엔진의 템플릿으로 되돌아가는 조용한 오류 라우팅을 방지합니다.
 
-수리 프롬프트는 AI 엔진에 전달되기 전에 셸 인젝션 방지를 위해 `_sanitize_for_prompt`로 정화됩니다.
+수리 프롬프트는 셸 인젝션 방지를 위해 `_sanitize_for_prompt`로 정화되며, shell fallback 경로에서 자연어 프롬프트가 직접 실행되지 않도록 차단됩니다.
 
 ### 커맨드 가드레일 (Command Guardrails)
 
@@ -431,7 +431,7 @@ python scripts/consensus_regression_test.py --project-root .          # 2 케이
 python scripts/plan_search_regression_test.py --project-root .        # 2 케이스
 python scripts/frontstage_codex_teams_regression_test.py --project-root .  # 1 케이스 (다단계)
 python scripts/delegate_worker_regression_test.py --project-root .    # 1 케이스 (E2E)
-python scripts/ai_worker_regression_test.py --project-root .          # 3 케이스 (codex/gemini/폴백)
+python scripts/ai_worker_regression_test.py --project-root .          # 4 케이스 (codex/gemini/폴백/repair 분리)
 ```
 
 ## 로드맵

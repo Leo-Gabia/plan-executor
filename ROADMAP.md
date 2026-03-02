@@ -57,12 +57,13 @@ Summary of what exists as of 2026-03-02:
 
 ### Phase 3: Multi-Agent Engine (Codex-first parallel orchestration)
 
-- Status: **~75% complete** (engine flag, hybrid failure handling, fallback chain implemented; real Codex E2E untested).
+- Status: **~75% complete** (engine flag, hybrid failure handling, fallback chain + repair-engine split implemented; real Codex E2E untested).
 - What exists:
   - `frontstage_codex_teams.py`: parallel role agents with consensus (propose/critique/revise).
   - `delegate_worker.py`: Codex and Gemini engine detection and command wrapping.
   - `hybrid_pipeline.py`: frontstage plan to PE runbook conversion.
   - `frontstage_role_worker.py`: persistent worker processes with JSON IPC.
+  - `worker_adapters.py`: execution-engine fallback is independent from repair engine; logic-failure repair is routed via Codex to avoid natural-language repair prompt execution on shell fallback.
 - Tasks:
   - Wire frontstage → hybrid_pipeline → orchestrator as one-command E2E flow.
   - ~~Add engine fallback policy: Codex fail → Gemini → shell, configurable per runbook.~~ Done. Includes runtime fallback with template synchronization.

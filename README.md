@@ -194,7 +194,7 @@ When a command fails, the failure is classified:
 | Type | Trigger | Handling |
 |------|---------|----------|
 | **Infrastructure** | Timeout, SIGKILL, SIGSEGV, binary not found, empty stderr | Deterministic: PE retries with backoff, then tries remaining engines in `fallback_chain`. Template is synchronized on engine switch so subsequent commands use the correct wrapper. |
-| **Logic** | Nonzero exit with meaningful stderr (test fail, build error) | AI-judged: Builds repair prompt from stderr/stdout, sends to AI engine for diagnosis and fix. Bounded by `max_replan`. Skipped if infra fallback already resolved the failure. |
+| **Logic** | Nonzero exit with meaningful stderr (test fail, build error) | AI-assisted: Builds a repair prompt from stderr/stdout, then routes repair through a dedicated Codex repair engine (`codex`) regardless of current execution fallback. Bounded by `max_replan`; skipped when Codex repair is unavailable. |
 
 Classification logic (`_classify_failure`):
 - Timeout → infrastructure
@@ -204,7 +204,7 @@ Classification logic (`_classify_failure`):
 
 **Infrastructure fallback during execution:** When an infrastructure failure occurs mid-lane, PE walks the remaining `fallback_chain` engines. On success, `effective_engine` and `template` are both updated so that all subsequent commands in the same lane run through the new engine. This prevents silent misrouting where a fallback succeeds for one command but later commands revert to the failed engine's template.
 
-The repair prompt is sanitized (`_sanitize_for_prompt`) to prevent shell injection before being passed to the AI engine.
+The repair prompt is sanitized (`_sanitize_for_prompt`) to prevent shell injection and is never executed directly by shell fallback.
 
 ### Command Guardrails
 
@@ -443,7 +443,7 @@ python scripts/consensus_regression_test.py --project-root .          # 2 cases
 python scripts/plan_search_regression_test.py --project-root .        # 2 cases
 python scripts/frontstage_codex_teams_regression_test.py --project-root .  # 1 case (multi-phase)
 python scripts/delegate_worker_regression_test.py --project-root .    # 1 case (E2E)
-python scripts/ai_worker_regression_test.py --project-root .          # 3 cases (codex/gemini/fallback)
+python scripts/ai_worker_regression_test.py --project-root .          # 4 cases (codex/gemini/fallback/repair-split)
 ```
 
 ## Roadmap
