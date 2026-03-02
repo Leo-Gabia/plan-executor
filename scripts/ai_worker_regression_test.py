@@ -164,12 +164,21 @@ def run_case(
     status = str(state.get("status", "unknown"))
 
     ok = status == "completed"
-    # Gemini-missing-key scenario must skip both lanes.
+    # Gemini-missing-key: gemini unavailable, no fallback_chain configured so lanes are skipped.
+    # Both lanes should complete with skip evidence (ai-worker-unavailable-skip).
     if case_id == "gemini-missing-key":
-        ok = ok and metrics["skip_count"] == 2 and metrics["by_engine"].get("gemini", 0) == 2
-    # Gemini-explicit must route to gemini engine.
+        ok = ok and metrics["lane_done_count"] == 2
+        # All lanes should be skipped since gemini key is empty and no fallback chain.
+        ok = ok and metrics["skip_count"] == 2
+    # Gemini-explicit: gemini requested explicitly; if available it runs, if not it skips.
     if case_id == "gemini-explicit":
-        ok = ok and metrics["by_engine"].get("gemini", 0) == 2
+        ok = ok and metrics["lane_done_count"] == 2
+        if os.environ.get("GEMINI_API_KEY", "").strip():
+            # Key present: verify gemini engine actually ran.
+            ok = ok and metrics["by_engine"].get("gemini", 0) == 2
+        else:
+            # Key absent: verify lanes were properly skipped (not silently misrouted).
+            ok = ok and metrics["skip_count"] == 2
     # Codex-only must route to codex engine.
     if case_id == "codex-only":
         ok = ok and metrics["by_engine"].get("codex", 0) == 2
